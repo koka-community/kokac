@@ -5,11 +5,13 @@
    use this file except in compliance with the License. A copy of the License
    can be found in the LICENSE file at the root of this distribution.
 ----------------------------------------------------------------------------*/
-import std/os/flags
-import std/os/env
-import kokac/kokac
-import kokac/package
-import kokac/git
+module kokac/exec
+import std/os/process
+import std/os/path
 
-pub fun test()
-  install(Package-file(Default, Local, [Dependency("std", GitDep("git@github.com:koka-community/std", "", GitBranch("main")))], [], []))
+pub effect val current-dir: path
+
+pub fun run(command : string)
+  val real-command = "cd \"" ++ current-dir.string ++ "\" && " ++ command
+  if run-system(real-command) == 0 then ()
+  else throw("Command failed: " ++ real-command)
