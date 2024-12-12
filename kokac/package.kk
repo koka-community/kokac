@@ -62,3 +62,7 @@ pub struct package-file
   dependencies: list<dependency>
   dev-dependencies: list<dependency>
   scripts: list<script>;
+
+// TODO: Parsing a koka.yaml file
+pub fun parse-package(file: path): exn package-file
+  throw("Not implemented")
