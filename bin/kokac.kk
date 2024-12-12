@@ -5,7 +5,5 @@
    use this file except in compliance with the License. A copy of the License
    can be found in the LICENSE file at the root of this distribution.
 ----------------------------------------------------------------------------*/
-import template
-
-pub fun main()
-  template()
+import std/os/flags
+import std/os/env
