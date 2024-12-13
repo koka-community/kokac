@@ -11,7 +11,11 @@ import std/os/path
 
 pub effect val current-dir: path
 
-pub fun run(command : string)
+pub fun run(command : string): <current-dir,io> ()
   val real-command = "cd \"" ++ current-dir.string ++ "\" && " ++ command
   if run-system(real-command) == 0 then ()
   else throw("Command failed: " ++ real-command)
+
+pub fun run-result(command : string): <current-dir,io> int
+  val real-command = "cd \"" ++ current-dir.string ++ "\" && " ++ command
+  run-system(real-command)

@@ -7,6 +7,7 @@
 ----------------------------------------------------------------------------*/
 module kokac/package
 import std/os/path
+import std/os/file
 import kokac/git
 
 // WIP: Package file format
@@ -64,5 +65,6 @@ pub struct package-file
   scripts: list<script>;
 
 // TODO: Parsing a koka.yaml file
-pub fun parse-package(file: path): exn package-file
-  throw("Not implemented")
+pub fun parse-package(file: path): io package-file
+  val contents = file.read-text-file
+  Package-file(Default, Local, [], [], [])

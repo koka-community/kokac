@@ -6,10 +6,10 @@
    can be found in the LICENSE file at the root of this distribution.
 ----------------------------------------------------------------------------*/
 module kokac/kokac
-import std/os/process
 import std/os/path
 import std/os/dir
 import kokac/package
+import kokac/exec
 import kokac/git
 
 // TODO: Check for changes / open editor in dependency
@@ -40,14 +40,45 @@ pub fun imports(pkg: package-file): io list<path>
   (pkg.dependencies ++ pkg.dev-dependencies).map fn(dep)
     top-path / dep.name / dep.name
 
-pub fun run(file: path, args: list<string>): io int
-  val dir = file.dirname.path
-  val pkg = dir / "koka.yaml"
-  if is-file(pkg) then
-    val package = parse-package(pkg)
-    install(package) // TODO: Keep track of timestamp to not refetch for 30 seconds?
-    val args' = package.imports.map(fn(p) "-i" ++ p.string) ++ args
-    run-system("koka " ++ args'.join(" "))
+pub fun imports-args(pkg: package-file): io list<string>
+  imports(pkg).map(fn(p) "-i" ++ p.string)
+
+pub fun find-package-root(file: path): io maybe<(path, path)>
+  if file.dirname == file.string || file.dirname == "" then
+    Nothing
   else
-    println("No package file found in " ++ dir.string)
-    -1
+    val pkgpath = file.dirname 
+    if is-file(pkgpath / "koka.yaml") then
+      Just((pkgpath.path, pkgpath / "koka.yaml"))
+    elif is-file(pkgpath / "koka.yml") then
+      Just((pkgpath.path, pkgpath / "koka.yml"))
+    else
+      find-package-root(file.dirname.path)
+
+pub fun run(file: path, args: list<string>): io int
+  match find-package-root(file)
+    Just((root, yml)) ->
+      val package = parse-package(yml)
+      install(package) // TODO: Keep track of timestamp to not refetch for 30 seconds?
+      println(package.imports-args)
+      val args' = package.imports-args ++ args
+      val command = "koka " ++ args'.join(" ")
+      with val current-dir = root
+      run-result(command)
+    _ ->
+      println("No package file found in directories above " ++ file.string)
+      -1
+
+pub fun run-langserver(args: list<string>): io int
+  match find-package-root(cwd() / "koka.yaml") // Dummy filename, since we don't have a file to resolve the package file from
+    Just((root, yml)) ->
+      val package = parse-package(yml)
+      install(package)
+      println(package.imports-args)
+      val args' = package.imports-args ++ args
+      val command = "koka " ++ args'.join(" ")
+      with val current-dir = root
+      run-result(command)
+    _ -> 
+      println("No package file found in directories above " ++ cwd().string)
+      -1
