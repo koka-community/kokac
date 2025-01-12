@@ -13,8 +13,9 @@ pub effect val current-dir: path
 
 pub fun run(command : string): <current-dir,io> ()
   val real-command = "cd \"" ++ current-dir.string ++ "\" && " ++ command
-  if run-system(real-command) == 0 then ()
-  else throw("Command failed: " ++ real-command)
+  match run-system-read(real-command)
+    Ok -> ()
+    Error(err) -> throw("Command failed: " ++ real-command ++ "\n\t" ++ err.show)
 
 pub fun run-result(command : string): <current-dir,io> int
   val real-command = "cd \"" ++ current-dir.string ++ "\" && " ++ command

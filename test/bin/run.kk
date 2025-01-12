@@ -1,2 +1,3 @@
+import std/data/json
 fun main()
-  "Done".println
+  JSList([JSString("Hi")]).println

@@ -1,0 +1,43 @@
+/*----------------------------------------------------------------------------
+   Copyright 2024, Koka-Community Authors
+
+   Licensed under the MIT License ("The License"). You may not
+   use this file except in compliance with the License. A copy of the License
+   can be found in the LICENSE file at the root of this distribution.
+----------------------------------------------------------------------------*/
+module kokac/config
+import kokac/package
+import kokac/git
+
+pub effect package-config
+  fun set-dependencies(deps: list<dependency>): ()
+  fun set-dev-dependencies(deps: list<dependency>): ()
+  fun set-scripts(scripts: list<script>): ()
+  fun set-compiler(compiler: compiler): ()
+  fun set-resolution(resolution: resolution): ()
+  fun get-dependencies(): list<dependency>
+  fun get-dev-dependencies(): list<dependency>
+  fun get-scripts(): list<script>
+  fun get-compiler(): compiler
+  fun get-resolution(): resolution
+
+effect dependencies
+  fun add-dep(d: dependency): ()
+
+pub fun dependencies(f)
+  var deps := []
+  with fun add-dep(d) deps := Cons(d, deps)
+  mask<local>{f()}
+  set-dependencies(deps)
+
+pub fun simple/dep(name: string, git: () -> string)
+  add-dep(Dependency(name, GitDep(git(), "", GitDefault)))
+
+pub effect scripts
+  fun script(name: string, command: () -> string): ()
+
+pub fun scripts(f)
+  var scripts := []
+  with fun script(name, command) scripts := Cons(Script(name, command()), scripts)
+  mask<local>{f()}
+  set-scripts(scripts)

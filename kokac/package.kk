@@ -8,10 +8,10 @@
 module kokac/package
 import std/os/path
 import std/os/file
+import std/os/dir
 import std/os/process
-import std/data/json
-import parsers/alex/json-parse
 import kokac/git
+import kokac/exec
 
 // WIP: Package file format
 // ``` koka.yaml
@@ -103,94 +103,46 @@ pub fun script/show(this : script) : e string
     Script(command, execute) ->
       "Script(command: " ++ command ++ ", execute: " ++ execute ++ ")"
 
-pub struct package-file
-  compiler: compiler
-  resolution: resolution
-  dependencies: list<dependency>
-  dev-dependencies: list<dependency>
-  scripts: list<script>;
-
-// Automatically generated.
-// Shows a string representation of the `package-file` type.
-pub fun package-file/show(this : package-file) : e string
-  match this
-    Package-file(compiler, resolution, dependencies, dev-dependencies, scripts) ->
-      "Package-file(compiler: " ++ show(compiler) ++ ", resolution: " ++ show(resolution) ++ ", dependencies: " ++ show(dependencies) ++ ", dev-dependencies: " ++ show(dev-dependencies) ++ ", scripts: " ++ show(scripts) ++ ")"
-
-pub fun compiler/from-json(jobj: json, json-path: string): pure compiler
-  val npath = "compiler -> " ++ json-path
-  match jobj
-    JSString("default") -> Default
-    JSObj(obj) -> 
-      match obj.maybe/from-json("path", npath, ?from-json = string/from-json)
-        Just(compiler-path) -> Path(compiler-path.path)
-        _ ->
-          match obj.maybe/from-json("commit", npath, ?from-json = string/from-json)
-            Just(commit) -> Commit(commit)
-            _ ->
-              match obj.maybe/from-json("version", npath, ?from-json = string/from-json)
-                Just(version) -> Version(version)
-                _ -> 
-                  throw("Invalid compiler object", info=JsonDeserializationException(jobj, npath))
-    _ -> throw("Invalid compiler object", info=JsonDeserializationException(jobj, npath))
-
-pub fun resolution/from-json(jobj: json, json-path: string): pure resolution
-  val npath = "resolution -> " ++ json-path
-  match jobj
-    JSObj(obj) -> 
-      match obj.maybe/from-json("global", npath, ?from-json = string/from-json)
-        Just(global-path) -> Global(global-path.path)
-        _ -> Local
-    _ -> Local
-
-pub fun deps/from-json(jobj: json, json-path: string): pure list<dependency>
-  val npath = "dependencies -> " ++ json-path
-  jobj.as-object(npath).map fn((name, source))
-    Dependency(
-      name,
-      dep-source/from-json(source, npath)
-    )
-
-pub fun dep-source/from-json(jobj: json, json-path: string): pure dep-source
-  val npath = "source -> " ++ json-path
-  match jobj
-    JSObj(obj) ->
-      GitDep(
-        obj.dict/from-json("url", npath, ?from-json = string/from-json),
-        obj.maybe/from-json("path", npath, ?from-json = string/from-json).default(""),
-        obj.maybe/from-json("ref", npath, ?from-json = git-ref/from-json).default(GitBranch("main"))
-      )
-    JSString(url) -> GitDep(url, "", GitDefault)
-
-pub fun looks-like-hash(s: string): pure bool
-  s.count == 40 && s.list.all(fn(c) c.is-hex-digit)
-
-pub fun git-ref/from-json(jobj: json, json-path: string): pure git-ref
-  val npath = "commit -> " ++ json-path
-  match jobj
-    JSString(ref) -> 
-      if ref.looks-like-hash then GitCommit(ref)
-      else GitBranch(ref)
-      GitCommit(ref)
-    _ -> throw("Expecting string, got " ++ jobj.show, info=JsonDeserializationException(jobj, npath))
-
-pub fun scripts/from-json(jobj: json, json-path: string): pure list<script>
-  val npath = "scripts -> " ++ json-path
-  val obj = jobj.as-object(npath)
-  obj.map(fn((key, value)) Script(key, value.string/from-json(npath)))
-  
-
-pub fun package-file/from-json(jobj: json, json-path: string): pure package-file
-  val obj = jobj.as-object(json-path)
-  Package-file(
-    obj.maybe/from-json("compiler", "", ?from-json=compiler/from-json).default(Default),
-    obj.maybe/from-json("resolution", "", ?from-json=resolution/from-json).default(Local),
-    obj.maybe/from-json("dependencies", "", ?from-json=deps/from-json).default([]),
-    obj.maybe/from-json("dev-dependencies", "", ?from-json=deps/from-json).default([]),
-    obj.maybe/from-json("scripts", "", ?from-json=scripts/from-json).default([])
-  )
-
-pub fun parse-package(file: path): io package-file
-  match run-system-read("python3 -c 'import yaml; import json; import sys; print(json.dumps(yaml.safe_load(open(\"" ++ file.string ++ "\", \"r\").read())));'")
-    Error(err) -> throw("Failed to parse package file, make sure the file exists, you have python3 installed and the yaml python package installed:\n\t" ++ err.show)
-    Ok(str) -> parse(json-parse/json/parse(str), package-file/from-json)
+pub fun create-package-runner(file: path): io ()
+  val deps = file.dirname / "deps"
+  ensure-dir(deps)
+  with val current-dir = deps
+  download-or-update("kokac", "https://github.com/koka-community/kokac", "", GitDefault, deps)
+  val kokac = file.dirname / ".kokac"
+  ensure-dir(kokac)
+  copy-file(file, kokac / "package.kk")
+  if !is-file(kokac / "kokap.kk") then
+    write-text-file(kokac / "kokap.kk".path, r#"
+  import package
+  import kokac/config
+  import kokac/kokac
+  fun main()
+    var deps := []
+    var scripts := []
+    var dev-deps := []
+    var compiler := Default
+    var resolution := Local
+    with handler
+      fun set-dependencies(deps_new) deps := deps_new
+      fun set-dev-dependencies(dev-deps_new) dev-deps := dev-deps_new
+      fun set-scripts(scripts_new) scripts := scripts_new
+      fun set-compiler(compiler_new) compiler := compiler_new
+      fun set-resolution(resolution_new) resolution := resolution_new
+      fun get-dependencies(): deps
+      fun get-dev-dependencies(): dev-deps
+      fun get-scripts(): scripts
+      fun get-compiler(): compiler
+      fun get-resolution(): resolution
+    val args = get-args()
+    // Split the file from the rest of the arguments so we can resolve the package from the file
+    val file = args.filter(fn(a) a.starts-with("-").is-nothing && a.starts-with("--").is-nothing)
+    match file
+      Cons(f, Nil) -> 
+        run((cwd() / f).realpath, args)
+      _ -> 
+        run-langserver(args) // Just passthrough the arguments using the cwd as location to resolve package file from.
+    "#)
+  val build = (kokac / "kokap.kk ").string
+  val out = (file.dirname / "koka").string
+  run-system("koka " ++ build ++ "-ideps/kokac -o=" ++ out)
+  ()

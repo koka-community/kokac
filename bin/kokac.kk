@@ -26,4 +26,4 @@ pub fun main(): <io> int
      Cons(f, Nil) -> 
       run((cwd() / f).realpath, args)
      _ -> 
-      run-langserver(args) // Just passthrough the arguments using the cwd as location to resolve package file from.
+      run-basic(args) // Just passthrough the arguments using the cwd as location to resolve package file from.
