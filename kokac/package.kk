@@ -7,11 +7,7 @@
 ----------------------------------------------------------------------------*/
 module kokac/package
 import std/os/path
-import std/os/file
-import std/os/dir
-import std/os/process
 import kokac/git
-import kokac/exec
 
 // WIP: Package file format
 // ``` koka.yaml
@@ -102,37 +98,3 @@ pub fun script/show(this : script) : e string
   match this
     Script(command, execute) ->
       "Script(command: " ++ command ++ ", execute: " ++ execute ++ ")"
-
-pub fun create-package-runner(file: path): io ()
-  val deps = file.dirname / "deps"
-  ensure-dir(deps)
-  with val current-dir = deps
-  download-or-update("kokac", "https://github.com/koka-community/kokac", "", GitDefault, deps)
-  val kokac = file.dirname / ".kokac"
-  ensure-dir(kokac)
-  copy-file(file, kokac / "package.kk")
-  if !is-file(kokac / "kokap.kk") then
-    write-text-file(kokac / "kokap.kk".path, r#"
-import package
-import kokac/config
-import kokac/kokac
-import std/os/env
-import std/os/path
-
-fun main()
-  with default-package-config
-  package()
-  val args = get-args()
-  // Split the file from the rest of the arguments so we can resolve the package from the file
-  val file = args.filter(fn(a) a.starts-with("-").is-nothing && a.starts-with("--").is-nothing)
-  match file
-    Cons(f, Nil) -> 
-      run((cwd() / f).realpath, args)
-    _ -> 
-      run-basic(args) // Just passthrough the arguments using the cwd as location to resolve package file from.
-  "#)
-  val build = (kokac / "kokap.kk ").string
-  val out = (file.dirname / "koka").string
-  val kokacpath = file.dirname / "deps/kokac"
-  run-system("koka " ++ build ++ " -i" ++ kokacpath.string ++  " -o" ++ out)
-  ()
