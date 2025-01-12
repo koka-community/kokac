@@ -16,17 +16,18 @@ import kokac/git
 // TODO: VSCode extension (try to use official extension but with different Koka executable location, since this should mimic it)
 // TODO: Default shallow clone, but configured with a quick way to checkout another (non-fetched) branch. 
 // TODO: Remove koka-community repo, and suggest migration to this tool
+effect val package-root : path
 
 pub fun download(dep: dependency, target-dir: path): io ()
   match dep.source
     GitDep(url, path, ref) -> download-or-update(dep.name, url, path, ref, target-dir)
 
-pub fun path(resolution: resolution): io path
+pub fun path(resolution: resolution): <package-root,io> path
   match resolution
     Global(pkg-path) -> pkg-path
-    Local -> cwd() / "deps"
+    Local -> package-root / "deps"
 
-pub fun install(pkg: package-file): io ()
+pub fun install(pkg: package-file): <package-root,io> ()
   val download-dir = pkg.resolution.path
   ensure-dir(download-dir)
   pkg.dependencies.foreach fn(dep)
@@ -35,12 +36,12 @@ pub fun install(pkg: package-file): io ()
     download(dep, download-dir)
   ()
 
-pub fun imports(pkg: package-file): io list<path>
+pub fun imports(pkg: package-file): <package-root,io> list<path>
   val top-path = pkg.resolution.path
   (pkg.dependencies ++ pkg.dev-dependencies).map fn(dep)
     top-path / dep.name / dep.name
 
-pub fun imports-args(pkg: package-file): io list<string>
+pub fun imports-args(pkg: package-file): <package-root,io> list<string>
   imports(pkg).map(fn(p) "-i" ++ p.string)
 
 pub fun find-package-root(file: path): io maybe<(path, path)>
@@ -58,21 +59,23 @@ pub fun find-package-root(file: path): io maybe<(path, path)>
 pub fun run(file: path, args: list<string>): io int
   match find-package-root(file)
     Just((root, yml)) ->
+      with val package-root = root
       val package = parse-package(yml)
       install(package) // TODO: Keep track of timestamp to not refetch for 30 seconds?
-      println(package.imports-args)
+      // println(package.imports-args)
       val args' = package.imports-args ++ args
-      val command = "koka " ++ args'.join(" ")
+      val command = "koka " ++ file.realpath.string ++ " " ++ args'.join(" ")
       with val current-dir = root
       run-result(command)
     _ ->
       println("No package file found in directories above " ++ file.string)
       -1
 
-pub fun run-langserver(args: list<string>): io int
+pub fun run-basic(args: list<string>): io int
   match find-package-root(cwd() / "koka.yaml") // Dummy filename, since we don't have a file to resolve the package file from
     Just((root, yml)) ->
       val package = parse-package(yml)
+      with val package-root = root
       install(package)
       println(package.imports-args)
       val args' = package.imports-args ++ args

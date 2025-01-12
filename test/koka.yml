@@ -1,0 +1,7 @@
+
+dependencies:
+  parsing: git@github.com:koka-community/parsing
+  std: git@github.com:koka-community/std
+
+scripts:
+  run: 'echo "Hello World"'
