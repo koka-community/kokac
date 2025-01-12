@@ -7,6 +7,7 @@ import std/os/path
 
 fun main()
   with default-package-config
+  package()
   val args = get-args()
   // Split the file from the rest of the arguments so we can resolve the package from the file
   val file = args.filter(fn(a) a.starts-with("-").is-nothing && a.starts-with("--").is-nothing)

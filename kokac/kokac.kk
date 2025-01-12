@@ -61,8 +61,9 @@ pub fun run(file: path, args: list<string>): <package-config,io> int
   match find-package-root(file)
     Just((root, _)) ->
       with val package-root = root
+      // println(root)
       install() // TODO: Keep track of timestamp to not refetch for 30 seconds?
-      // println(package.imports-args)
+      // println(imports-args())
       val args' = imports-args() ++ args
       val command = "koka " ++ file.realpath.string ++ " " ++ args'.join(" ")
       with val current-dir = root
@@ -75,8 +76,9 @@ pub fun run-basic(args: list<string>): <package-config,io> int
   match find-package-root(cwd() / "koka.yaml") // Dummy filename, since we don't have a file to resolve the package file from
     Just((root, _)) ->
       with val package-root = root
+      // println(root)
       install()
-      println(imports-args())
+      // println(imports-args())
       val args' = imports-args() ++ args
       val command = "koka " ++ args'.join(" ")
       with val current-dir = root

@@ -1,6 +1,6 @@
 import kokac/config
 
-fun project()
+fun package()
   dependencies
     dep("parsing")
       "git@github.com:koka-community/parsing"

@@ -111,8 +111,8 @@ pub fun create-package-runner(file: path): io ()
   val kokac = file.dirname / ".kokac"
   ensure-dir(kokac)
   copy-file(file, kokac / "package.kk")
-  // if !is-file(kokac / "kokap.kk") then
-  write-text-file(kokac / "kokap.kk".path, r#"
+  if !is-file(kokac / "kokap.kk") then
+    write-text-file(kokac / "kokap.kk".path, r#"
 import package
 import kokac/config
 import kokac/kokac
@@ -121,6 +121,7 @@ import std/os/path
 
 fun main()
   with default-package-config
+  package()
   val args = get-args()
   // Split the file from the rest of the arguments so we can resolve the package from the file
   val file = args.filter(fn(a) a.starts-with("-").is-nothing && a.starts-with("--").is-nothing)
@@ -133,5 +134,5 @@ fun main()
   val build = (kokac / "kokap.kk ").string
   val out = (file.dirname / "koka").string
   val kokacpath = file.dirname / "deps/kokac"
-  run-system("koka " ++ build ++ " -i" ++ kokacpath.string ++  " -o=" ++ out)
+  run-system("koka " ++ build ++ " -i" ++ kokacpath.string ++  " -o" ++ out)
   ()
