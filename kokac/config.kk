@@ -21,6 +21,25 @@ pub effect package-config
   fun get-compiler(): compiler
   fun get-resolution(): resolution
 
+pub fun default-package-config(f)
+  var deps := []
+  var scripts := []
+  var dev-deps := []
+  var compiler := Default
+  var resolution := Local
+  with handler
+    fun set-dependencies(deps_new) deps := deps_new
+    fun set-dev-dependencies(dev-deps_new) dev-deps := dev-deps_new
+    fun set-scripts(scripts_new) scripts := scripts_new
+    fun set-compiler(compiler_new) compiler := compiler_new
+    fun set-resolution(resolution_new) resolution := resolution_new
+    fun get-dependencies() deps
+    fun get-dev-dependencies() dev-deps
+    fun get-scripts() scripts
+    fun get-compiler() compiler
+    fun get-resolution() resolution
+  f()
+
 effect dependencies
   fun add-dep(d: dependency): ()
 
