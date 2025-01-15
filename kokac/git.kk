@@ -35,21 +35,30 @@ pub fun ref(r: git-ref)
 
 pub fun expose-branches(): <current-dir,io> ()
   run("git config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'")
+  ()
 
 // Can turn a shallow repo into a deep one
 pub fun fetch-all(shallow: bool = True): <current-dir,io> ()
-  if shallow then run("git fetch --all --depth=1")
-  else run("git fetch --all")
+  if shallow then 
+    run("git fetch --all --depth=1")
+    ()
+  else 
+    run("git fetch --all")
+    ()
 
 pub fun checkout(commit: git-ref)
   match commit
     GitDefault -> 
       val ref = run-system-read("git symbolic-ref refs/remotes/origin/HEAD --short").untry
       run("git checkout " ++ ref.split("/")[1].unjust)
-    _ -> run("git checkout " ++ commit.ref)
+      ()
+    _ -> 
+      run("git checkout " ++ commit.ref)
+      ()
 
 pub fun pull()
   run("git pull")
+  ()
 
 pub fun download-or-update(name: string, url: string, repo-path: string, commit: git-ref, target-dir: path)
   if repo-path != "" then 

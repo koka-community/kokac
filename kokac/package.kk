@@ -37,7 +37,7 @@ import kokac/git
 // ```
 pub type compiler
   Default
-  Path(sdk-path: path) 
+  Sdk(sdk-path: path) 
   Commit(hash: string)
   Version(version: string)
 
@@ -47,7 +47,7 @@ pub fun compiler/show(this : compiler) : e string
   match this
     Default ->
       "Default"
-    Path(sdk-path) ->
+    Sdk(sdk-path) ->
       "Path(sdk-path: " ++ show(sdk-path) ++ ")"
     Commit(hash) ->
       "Commit(hash: " ++ hash ++ ")"

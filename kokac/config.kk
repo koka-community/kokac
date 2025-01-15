@@ -8,6 +8,7 @@
 module kokac/config
 import kokac/package
 import kokac/git
+import std/os/path
 
 pub effect package-config
   fun set-dependencies(deps: list<dependency>): ()
@@ -60,3 +61,9 @@ pub fun scripts(f)
   with fun script(name, command) scripts := Cons(Script(name, command()), scripts)
   mask<local>{f()}
   set-scripts(scripts)
+
+pub fun install-location(s: string): <package-config> ()
+  set-resolution(Global(s.path))
+
+pub fun compiler(comp)
+  set-compiler(comp)

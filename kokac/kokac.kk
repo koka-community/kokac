@@ -10,6 +10,7 @@ import std/os/path
 import std/os/dir
 import std/os/file
 import std/os/process
+import std/os/env
 import kokac/package
 import kokac/exec
 import kokac/git
@@ -58,46 +59,35 @@ pub fun find-package-root(file: path): io maybe<(path, path)>
     else
       find-package-root(file.dirname.path)
 
-pub fun name/init(nm: path)
-  val pkg = nm / "package.kk"
-  if !is-file(pkg) then
-    write-text-file(pkg, r#"
+val basic-package = r#"
 import kokac/config
 
 fun package()
   dependencies
     dep("std")
       "git@github.com:koka-community/std"
-"#, True)
-  write-text-file(nm / "bin" / "run.kk", r#"
+"#
+
+val basic-test = r#"
 import std/data/json
 fun main()
   JSList([JSString("Hi")]).println
-"#)
+"#
+
+pub fun name/init(nm: path)
+  val pkg = nm / "package.kk"
+  if !is-file(pkg) then
+    write-text-file(pkg, basic-package, True)
+  write-text-file(nm / "bin" / "run.kk", basic-test, True)
   init-runner(pkg)
 
 pub fun basic/init()
   val pkg = cwd() / "package.kk"
   if !is-file(pkg) then
-    write-text-file(pkg, r#"
-import kokac/config
-
-fun package()
-  dependencies
-    dep("std")
-      "git@github.com:koka-community/std"
-"#)
+    write-text-file(pkg, basic-package)
   init-runner(pkg)
 
-pub fun init-runner(file: path): io ()
-  val deps = file.dirname / "deps"
-  ensure-dir(deps)
-  download-or-update("kokac", "https://github.com/koka-community/kokac", "", GitDefault, deps)
-  val kokac = file.dirname / ".kokac"
-  ensure-dir(kokac)
-  copy-file(file, kokac / "package.kk")
-  if !is-file(kokac / "kokap.kk") then
-    write-text-file(kokac / "kokap.kk".path, r#"
+val runner = r#"
 import package
 import kokac/config
 import kokac/kokac
@@ -115,11 +105,41 @@ fun main()
       run((cwd() / f).realpath, args)
     _ -> 
       run-basic(args) // Just passthrough the arguments using the cwd as location to resolve package file from.
-  "#)
+"#
+
+pub fun get-compiler-command(): <package-config,io> string
+  match get-compiler()
+    Default -> "koka"
+    Sdk(sdk-path) -> 
+      // TODO: Cache this?
+      var command := "stack path --local-install-root"
+      if get-os-name() != "windows" then
+        val ghcenv = homedir() / "ghcup/env"
+        if is-file(ghcenv) then 
+          val shell = get-env-value("SHELL").default("bash")
+          command := shell ++ " -c \"source " ++ ghcenv.string ++ " && stack path --local-install-root\""
+      match run-system-read("cd \"" ++ sdk-path.string ++ "\" && " ++ command)
+        Ok(build-path) -> 
+          val koka-path = build-path.trim() / "bin/koka"
+          if is-file(koka-path) then
+            koka-path.string
+          else
+            throw("Compiler not found at " ++ koka-path.string)
+    _ -> throw("Compiler configuration not supported yet")
+
+pub fun init-runner(file: path): <package-config,io> ()
+  val deps = file.dirname / "deps"
+  ensure-dir(deps)
+  download-or-update("kokac", "https://github.com/koka-community/kokac", "", GitDefault, deps)
+  val kokac = file.dirname / ".kokac"
+  ensure-dir(kokac)
+  copy-file(file, kokac / "package.kk")
+  if !is-file(kokac / "kokap.kk") then
+    write-text-file(kokac / "kokap.kk".path, runner)
   val build = (kokac / "kokap.kk ").string
   val out = (file.dirname / "koka").string
   val kokacpath = (file.dirname / "deps/kokac").string
-  run-system("koka " ++ build ++ " -i" ++ kokacpath ++  " -o" ++ out)
+  run-system(get-compiler-command() ++ " " ++ build ++ " -i" ++ kokacpath ++  " -o" ++ out)
   ("Give the generated koka executable at " ++ out ++ " execute permissions").println
   ()
 
@@ -131,7 +151,7 @@ pub fun run(file: path, args: list<string>): <package-config,io> int
       install() // TODO: Keep track of timestamp to not refetch for 30 seconds?
       // println(imports-args())
       val args' = imports-args() ++ args
-      val command = "koka " ++ file.realpath.string ++ " " ++ args'.join(" ")
+      val command = get-compiler-command() ++ " " ++ file.realpath.string ++ " " ++ args'.join(" ")
       with val current-dir = root
       println(command)
       run-result(command)
@@ -147,7 +167,7 @@ pub fun run-basic(args: list<string>): <package-config,io> int
       install()
       // println(imports-args())
       val args' = imports-args() ++ args
-      val command = "koka " ++ args'.join(" ")
+      val command = get-compiler-command() ++ " " ++ args'.join(" ")
       with val current-dir = root
       println(command)
       run-result(command)
