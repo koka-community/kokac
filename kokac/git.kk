@@ -11,7 +11,7 @@ import std/os/path
 import std/os/process
 import std/os/dir
 
-pub type git-ref
+pub value type git-ref
   GitCommit(hash: string)
   GitBranch(name: string)
   GitDefault

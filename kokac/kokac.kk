@@ -127,7 +127,7 @@ pub fun get-compiler-command(): <package-config,io> string
             throw("Compiler not found at " ++ koka-path.string)
     _ -> throw("Compiler configuration not supported yet")
 
-pub fun init-runner(file: path): <package-config,io> ()
+pub fun init-runner(file: path): io ()
   val deps = file.dirname / "deps"
   ensure-dir(deps)
   download-or-update("kokac", "https://github.com/koka-community/kokac", "", GitDefault, deps)
@@ -139,7 +139,8 @@ pub fun init-runner(file: path): <package-config,io> ()
   val build = (kokac / "kokap.kk ").string
   val out = (file.dirname / "koka").string
   val kokacpath = (file.dirname / "deps/kokac").string
-  run-system(get-compiler-command() ++ " " ++ build ++ " -i" ++ kokacpath ++  " -o" ++ out)
+  // This cannot use get-compiler-commend(), because it is in the init
+  run-system("koka " ++ build ++ " -i" ++ kokacpath ++  " -o" ++ out)
   ("Give the generated koka executable at " ++ out ++ " execute permissions").println
   ()
 

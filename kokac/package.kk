@@ -77,7 +77,7 @@ pub fun dep-source/show(this : dep-source) : e string
     GitDep(url, path, commit) ->
       "GitDep(url: " ++ url ++ ", path: " ++ path ++ ", commit: " ++ show(commit) ++ ")"
 
-pub struct dependency
+pub value struct dependency
   name: string
   source: dep-source;
 
@@ -88,7 +88,7 @@ pub fun dependency/show(this : dependency) : e string
     Dependency(name, source) ->
       "Dependency(name: " ++ name ++ ", source: " ++ source.show ++ ")"
 
-pub struct script 
+pub value struct script 
   command: string
   execute: string;
 
