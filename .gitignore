@@ -1,0 +1,8 @@
+.koka
+scratch/
+deps/
+.kokac
+koka
+kokatmp
+test2
+bin/kokac
