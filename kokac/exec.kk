@@ -13,7 +13,7 @@ pub effect val current-dir: path
 
 pub fun run(command : string): <current-dir,io> string
   val real-command = "cd \"" ++ current-dir.string ++ "\" && " ++ command
-  trace(real-command)
+  // trace(real-command)
   match run-system-read(real-command)
     Ok(str) -> str
     Error(err) -> 
@@ -23,5 +23,5 @@ pub fun run(command : string): <current-dir,io> string
 
 pub fun run-result(command : string): <current-dir,io> int
   val real-command = "cd \"" ++ current-dir.string ++ "\" && " ++ command
-  trace(real-command)
+  // trace(real-command)
   run-system(real-command)

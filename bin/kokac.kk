@@ -11,6 +11,7 @@ import std/os/process
 import kokac/kokac
 import kokac/package
 import kokac/git
+import kokac/utils
 
 pub fun main()
   val args = get-args()
@@ -22,9 +23,6 @@ pub fun main()
       match file
         Cons(f, Nil) -> 
           val root = find-package-root(f.path.realpath)
-          match root
-            Just((pkg, _)) ->
-              run-system((pkg / "koka").realpath.string ++ " " ++ args.join(" "))
-              ()
-            Nothing -> throw("Could not find package root for file: " ++ f)
+          run-system(root.realpath.string ++ " " ++ args.join(" "))
+          ()
         _ -> throw("Pass a file to resolve the package location from, even for the language server")
