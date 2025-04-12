@@ -52,7 +52,7 @@ pub fun get-compiler-command(): <package-config,io> string
           command := shell ++ " -c \"source " ++ ghcenv.string ++ " && stack path --local-install-root\""
       match run-system-read("cd \"" ++ sdk-path.string ++ "\" && " ++ command)
         Ok(build-path) -> 
-          val koka-path = build-path.trim() / "bin/koka"
+          val koka-path = build-path.trim() / "bin" / "koka"
           if is-file(koka-path) then
             koka-path.string
           else
@@ -126,10 +126,10 @@ fun init-directory(package-path: path): io ()
 
 pub fun copy-package-file(file: path, kokac: path)
   ensure-dir(kokac / "current")
-  copy-file(file, kokac / "current/package.kk")
+  copy-file(file, kokac / "current" / "package.kk")
 
 fun package-file-deps(file: path): io list<string>
-  val kokac-path = (file.dirname / "deps/kokac").string
+  val kokac-path = (file.dirname / "deps" / "kokac").string
   val deps = (file.dirname / "deps").string
   val kokac = (file.dirname / ".kokac").string
   [kokac-path, deps, kokac]
@@ -143,7 +143,7 @@ fun init-top-runner()
   init-directory(current-dir)
   write-text-file(runner, top-runner(current-dir.string))
   write-text-file(current-dir / ".kokac" / "last-deps", "")
-  run("koka " ++ runner.string ++ " -o\"" ++ out.string ++ "\" -ideps/kokac")
+  run("koka " ++ runner.string ++ " -o\"" ++ out.string ++ "\" -i" ++ ("deps" / "kokac").string)
   make-executable(out)
   update-kokap()
   build-kokap()
@@ -200,12 +200,12 @@ fun parse-last-deps()
 fun build-kokap()
   val out = (".kokac" / "koka").exe-path
   val kokap = (".kokac" / "kokap.kk").string
-  run("koka " ++ kokap ++ " -o \"" ++ out.string ++ "\" -ideps -i.kokac -ideps/kokac")
+  run("koka " ++ kokap ++ " -o \"" ++ out.string ++ "\" -ideps -i.kokac -i" ++ ("deps" / "kokac").string)
   make-executable(out)
 
 fun run-kokap()
   val args = get-args()
-  run-result(".kokac/koka " ++ args.join(" "))
+  run-result((".kokac" / "koka").string ++ " " ++ args.join(" "))
 
 fun runner(path: string, deps: list<string>)
   r#"
