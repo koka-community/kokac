@@ -1,5 +1,7 @@
 import std/os/path
 import std/os/dir
+import std/os/env
+import kokac/exec 
 
 extern import
   c file "utils.c"
@@ -19,6 +21,15 @@ pub fun find-package-root(file: path): io path
       pkg-path.path
     else
       find-package-root(file.dirname.path)
+
+pub fun exe-path(path: path)
+  if get-os-name() == "windows" then path.change-ext(".exe") else path
+
+pub fun make-executable(p: path)
+  if get-os-name() == "windows" then
+    run("cmd /c attrib +x \"" ++ p.string ++ "\"")
+  else
+    run("/bin/bash -c \"chmod +x " ++ p.string ++ "\"")
 
 pub fun path/(==)(p1: path, p2: path): bool
   p1.string == p2.string

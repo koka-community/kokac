@@ -139,12 +139,12 @@ fun package-file-imports(file: path): io string
 
 fun init-top-runner()
   val runner = current-dir / ".kokac" / "kokax.kk"
-  val out = current-dir / "koka"
+  val out = exe-path(current-dir / "koka")
   init-directory(current-dir)
   write-text-file(runner, top-runner(current-dir.string))
   write-text-file(current-dir / ".kokac" / "last-deps", "")
-  run("koka " ++ runner.string ++ " -o" ++ out.string ++ " -ideps/kokac")
-  run("/bin/bash -c \"chmod +x " ++ out.string ++ "\"")
+  run("koka " ++ runner.string ++ " -o\"" ++ out.string ++ "\" -ideps/kokac")
+  make-executable(out)
   update-kokap()
   build-kokap()
   ()
@@ -198,10 +198,10 @@ fun parse-last-deps()
   file.split("\n").filter(fn(p) p != "")
 
 fun build-kokap()
-  val out = (".kokac" / "koka").string
+  val out = (".kokac" / "koka").exe-path
   val kokap = (".kokac" / "kokap.kk").string
-  run("koka " ++ kokap ++ " -o " ++ out ++ " -ideps -i.kokac -ideps/kokac")
-  run("/bin/bash -c \"chmod +x " ++ out ++ "\"")
+  run("koka " ++ kokap ++ " -o \"" ++ out.string ++ "\" -ideps -i.kokac -ideps/kokac")
+  make-executable(out)
 
 fun run-kokap()
   val args = get-args()
