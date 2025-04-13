@@ -15,15 +15,14 @@ extern string/file_modified(path: string): fsys maybe<int>
 pub fun path/file_modified(p: path): <fsys,exn> int
   p.string.file_modified.unjust
 
-pub fun find-package-root(file: path): io path
-  if file.dirname == file.string || file.dirname == "" then
+pub fun find-package-root(folder: path): io path
+  if folder.dirname == folder.string || folder.string == "" then
     throw("Couldn't find the package path")
   else
-    val pkg-path = file.dirname 
-    if is-file(pkg-path / "package.kk") then
-      pkg-path.path
+    if is-file(folder / "package.kk") then
+      folder
     else
-      find-package-root(file.dirname.path)
+      find-package-root(folder.dirname.path)
 
 pub fun exe-path(path: path): ndet path
   if get-os-name() == "windows" then path.change-ext(".exe") else path
