@@ -35,6 +35,7 @@ pub effect package-paths
   val update-runner-exe : path
 
 fun set-package-root(root: path, f: () -> <package-paths,ndet|e> a): <ndet|e> a
+  trace("package-root: " ++ root.string)
   val kkc = root / ".kokac"
   with handler
     val package-root = root
