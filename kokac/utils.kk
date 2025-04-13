@@ -1,7 +1,10 @@
 import std/os/path
 import std/os/dir
 import std/os/env
+import std/os/process
 import kokac/exec 
+import kokac/config 
+import kokac/package 
 
 extern import
   c file "utils.c"
@@ -22,7 +25,7 @@ pub fun find-package-root(file: path): io path
     else
       find-package-root(file.dirname.path)
 
-pub fun exe-path(path: path)
+pub fun exe-path(path: path): ndet path
   if get-os-name() == "windows" then path.change-ext(".exe") else path
 
 pub fun make-executable(p: path)
@@ -49,3 +52,23 @@ pub fun relative-path(p: path, base: path): io path
           throw("Cannot find relative path " ++ p.string.show ++ " " ++ base.string.show)
   // println("relative-path2 " ++ p.string ++ " " ++ base.string)
   go(bparts, pparts).foldl("".path, fn(acc, x) acc / x)
+
+pub fun get-compiler-command(): <package-config,io> string
+  match get-compiler()
+    Default -> "koka"
+    Sdk(sdk-path) -> 
+      // TODO: Cache this?
+      var command := "stack path --local-install-root"
+      if get-os-name() != "windows" then
+        val ghcenv = homedir() / "ghcup/env"
+        if is-file(ghcenv) then 
+          val shell = get-env-value("SHELL").default("bash")
+          command := shell ++ " -c \"source " ++ ghcenv.string ++ " && stack path --local-install-root\""
+      match run-system-read("cd \"" ++ sdk-path.string ++ "\" && " ++ command)
+        Ok(build-path) -> 
+          val koka-path = build-path.trim() / "bin" / "koka"
+          if is-file(koka-path) then
+            koka-path.string
+          else
+            throw("Compiler not found at " ++ koka-path.string)
+    _ -> throw("Compiler configuration not supported yet")

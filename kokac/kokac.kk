@@ -23,52 +23,48 @@ import kokac/utils
 // TODO: Default shallow clone. 
 // TODO: Remove koka-community repo, and suggest migration to this tool
 
-pub effect val package-root : path
+pub effect package-paths
+  val package-root : path
+  val package-runner-source : path
+  val package-runner-exe : path
+  val update-runner-source : path
+  val update-runner-exe : path
+
+fun set-package-root(root: path, f: () -> <package-paths,ndet|e> a): <ndet|e> a
+  val kokac = root / ".kokac"
+  with handler
+    val package-root = root
+    val package-runner-source = kokac / "koka-package-runner.kk"
+    val package-runner-exe = (kokac / "koka-package-runner").exe-path
+    val update-runner-source = kokac / "koka-update-runner.kk"
+    val update-runner-exe = (root / "koka").exe-path
+  f()
+
 
 // Runs a file
-pub fun run(file: path, args: list<string>): <package-root,current-dir,package-config,io> int
+fun run-file(file: path, args: list<string>): <package-paths,current-dir,package-config,io> int
   val args' = imports-args() ++ args
   val command = get-compiler-command() ++ " " ++ file.realpath.string ++ " " ++ args'.join(" ")
   println(command)
   run-result(command)
 
 // Runs the language server or passes through arguments that don't contain a file
-pub fun run-basic(args: list<string>): <package-root,current-dir,package-config,io> int
+fun run-basic(args: list<string>): <package-paths,current-dir,package-config,io> int
   val args' = imports-args() ++ args
   val command = get-compiler-command() ++ " " ++ args'.join(" ")
   println(command)
   run-result(command)
 
-pub fun get-compiler-command(): <package-config,io> string
-  match get-compiler()
-    Default -> "koka"
-    Sdk(sdk-path) -> 
-      // TODO: Cache this?
-      var command := "stack path --local-install-root"
-      if get-os-name() != "windows" then
-        val ghcenv = homedir() / "ghcup/env"
-        if is-file(ghcenv) then 
-          val shell = get-env-value("SHELL").default("bash")
-          command := shell ++ " -c \"source " ++ ghcenv.string ++ " && stack path --local-install-root\""
-      match run-system-read("cd \"" ++ sdk-path.string ++ "\" && " ++ command)
-        Ok(build-path) -> 
-          val koka-path = build-path.trim() / "bin" / "koka"
-          if is-file(koka-path) then
-            koka-path.string
-          else
-            throw("Compiler not found at " ++ koka-path.string)
-    _ -> throw("Compiler configuration not supported yet")
-
-pub fun download(dep: dependency, target-dir: path): io ()
+fun download(dep: dependency, target-dir: path): io ()
   match dep.source
     GitDep(url, path, ref) -> download-or-update(dep.name, url, path, ref, target-dir)
 
-pub fun deps-path(resolution: resolution): <package-root,io> path
+fun deps-path(resolution: resolution): <package-paths,io> path
   match resolution
     Global(pkg-path) -> pkg-path
     Local -> package-root / "deps"
 
-pub fun install(): <package-config,package-root,io> ()
+fun install(): <package-config,package-paths,io> ()
   val download-dir = get-resolution().deps-path
   ensure-dir(download-dir)
   get-dependencies().foreach fn(dep)
@@ -77,12 +73,12 @@ pub fun install(): <package-config,package-root,io> ()
     download(dep, download-dir)
   ()
 
-pub fun imports(): <package-config,package-root,io> list<path>
+fun imports(): <package-config,package-paths,io> list<path>
   val top-path = get-resolution().deps-path
   (get-dependencies() ++ get-dev-dependencies()).map fn(dep)
     top-path / dep.name
 
-pub fun imports-args(): <package-config,package-root,io> list<string>
+fun imports-args(): <package-config,package-paths,io> list<string>
   imports().map(fn(p) "-i" ++ p.string)
 
 val basic-test = r#"
@@ -124,7 +120,7 @@ fun init-directory(package-path: path): io ()
   ensure-dir(kokac)
   copy-package-file(package-path / "package.kk", kokac)
 
-pub fun copy-package-file(file: path, kokac: path)
+fun copy-package-file(file: path, kokac: path)
   ensure-dir(kokac / "current")
   copy-file(file, kokac / "current" / "package.kk")
 
@@ -213,7 +209,6 @@ import current/package
 import kokac/config
 import kokac/kokac
 import kokac/utils
-import kokac/exec
 import std/os/env
 import std/os/path
 import std/os/dir
@@ -224,32 +219,35 @@ val last-deps = ["# ++ deps.map(fn(d) "\"" ++ d ++ "\"").join(", ") ++ r#"]
 
 fun main()
   with val current-dir = cwd()
-  with val package-root = find-package-root(current-dir / "test.kk")
+  with set-package-root(find-package-root(current-dir / "test.kk"))
   with default-package-config
   current/package/package()
-  match register-dependencies(package-path, ["# ++ 
+  install-run(package-path, ["# ++ 
     deps.map(fn(d) d ++ "/package/package").join(", ") ++
       r#"], last-deps)
-    Just(new-deps) | new-deps != last-deps -> 
-      -1 // Need to rebuild
-    _ ->
-      val args = get-args()
-      // Split the file from the rest of the arguments so we can resolve the package from the file
-      val (file, rest) = args.span(fn(a) a.starts-with("-").is-nothing && a.starts-with("--").is-nothing)
-      match file
-        Cons(f, Nil) -> 
-          run((cwd() / f).realpath, rest)
-        _ -> 
-          run-basic(args) // Just passthrough the arguments using the cwd as location to resolve package file from.
 "#
 
-
-pub fun current-packages(dep-dir: path): io list<string>
+fun current-packages(dep-dir: path): io list<string>
   val packages = dep-dir.list-directory.filter fn(d)
     (d / "package.kk").is-file
   packages.map(fn(x) relative-path(x, dep-dir).string)
 
-pub fun register-dependencies(package-path: path, deps: list<() -> <current-dir,package-root,package-config,io> ()>, last-deps: list<string>): <current-dir,package-root,package-config,io> maybe<list<string>>
+alias package-registrar = () -> <package-config> ()
+
+pub fun install-run(package-path: path,
+                    deps: list<package-registrar>, 
+                    last-deps: list<string>): <current-dir,package-paths,package-config,io> int
   deps.foreach(submodule/config)
   install()
-  Just(current-packages(get-resolution().deps-path))
+  if current-packages(get-resolution().deps-path) != last-deps then
+    -1
+  else
+    val args = get-args()
+    // Split the file from the rest of the arguments so we can resolve the package from the file
+    val (file, rest) = args.span(fn(a) a.starts-with("-").is-nothing && a.starts-with("--").is-nothing)
+    match file
+      Cons(f, Nil) -> 
+        run-file((cwd() / f).realpath, rest)
+      _ -> 
+        run-basic(args) // Just passthrough the arguments using the cwd as location to resolve package file from.
+
