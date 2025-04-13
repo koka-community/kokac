@@ -50,7 +50,7 @@ static kk_std_core_types__maybe kk_file_modified(kk_string_t filepath, kk_contex
   int out = 0;
 
   // stat and create/overwrite target
-  struct stat finfo = { 0 };
+  kk_stat_t finfo = { 0 };
   int err = 0;
   if ((err = kk_posix_open(filepath, O_RDONLY, 0, &inp, ctx)) != 0) {
     return kk_std_core_types__new_Nothing(ctx);
@@ -59,5 +59,9 @@ static kk_std_core_types__maybe kk_file_modified(kk_string_t filepath, kk_contex
     close(inp);
     return kk_std_core_types__new_Nothing(ctx);
   }
+#ifdef WIN32
+  return kk_std_core_types__new_Just(kk_integer_box(kk_integer_from_int(finfo.st_mtime, ctx),ctx), ctx);
+#else
   return kk_std_core_types__new_Just(kk_integer_box(kk_integer_from_int(finfo.st_mtimespec.tv_sec, ctx),ctx), ctx);
+#endif
 }

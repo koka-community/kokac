@@ -61,7 +61,7 @@ effect dependencies
 pub fun dependencies(f)
   var deps := []
   with fun add-dep(d) deps := Cons(d, deps)
-  f()
+  mask<local>{f()}
   set-dependencies((deps ++ get-dependencies()).unique())
 
 pub fun unique(l: list<dependency>): list<dependency>
@@ -85,7 +85,7 @@ pub effect scripts
 pub fun scripts(f)
   var scripts := []
   with fun script(name, command) scripts := Cons(Script(name, command()), scripts)
-  f()
+  mask<local>{f()}
   set-scripts(scripts)
 
 pub fun install-location(s: string): <package-config> ()
