@@ -23,34 +23,51 @@ import kokac/utils
 // TODO: Default shallow clone. 
 // TODO: Remove koka-community repo, and suggest migration to this tool
 
+struct paths
+  package-root: path
+  last-deps-path: path
+  kokac-path: path
+  package-path: path
+  kokac-package-path: path
+  package-runner-source: path
+  package-runner-exe: path
+  update-runner-source: path
+  update-runner-exe: path
+
 pub effect package-paths
-  fun package-root() : path
-  fun last-deps-path() : path
-  fun kokac-path() : path
-  fun package-path() : path
-  fun kokac-package-path() : path
-  fun package-runner-source() : path
-  fun package-runner-exe() : path
-  fun update-runner-source() : path
-  fun update-runner-exe() : path
+  val package-paths: paths
+
+fun package-root() package-paths.package-root
+fun last-deps-path() package-paths.last-deps-path
+fun kokac-path() package-paths.kokac-path
+fun package-path() package-paths.package-path
+fun kokac-package-path() package-paths.kokac-package-path
+fun package-runner-source() package-paths.package-runner-source
+fun package-runner-exe() package-paths.package-runner-exe
+fun update-runner-source() package-paths.update-runner-source
+fun update-runner-exe() package-paths.update-runner-exe
+
+fun mk-paths(root: path): <ndet> paths
+  val kkc = root / ".kokac"
+  trace("kokac " ++ kkc.show)
+  val p = Paths(
+    package-root = root,
+    package-path = root / "package.kk",
+    kokac-path = kkc,
+    kokac-package-path = kkc / "current" / "package.kk",
+    last-deps-path = kkc / "last-deps",
+    package-runner-source = kkc / "koka-package-runner.kk",
+    package-runner-exe = (kkc / "koka-package-runner").exe-path,
+    update-runner-source = kkc / "koka-update-runner.kk",
+    update-runner-exe = (root / "koka").exe-path
+  )
+  trace("next " ++ kkc.show)
+  p
 
 fun set-package-root(root: path, f: () -> <package-paths,ndet|e> a): <ndet|e> a
   trace("package-root: " ++ root.string)
-  val kkc = root / ".kokac"
-  trace("kokac " ++ kkc.show)
-  with handler
-    fun package-root() root
-    fun package-path() root / "package.kk"
-    fun last-deps-path() kkc / "last-deps"
-    fun kokac-path() kkc
-    fun kokac-package-path() kkc / "current" / "package.kk"
-    fun package-runner-source() kkc / "koka-package-runner.kk"
-    fun package-runner-exe() (kkc / "koka-package-runner").exe-path
-    fun update-runner-source() kkc / "koka-update-runner.kk"
-    fun update-runner-exe() (root / "koka").exe-path
-  trace("next " ++ kkc.show)
+  with val package-paths = mk-paths(root)
   f()
-
 
 // Runs a file
 fun run-file(file: path, args: list<string>): <package-paths,current-dir,package-config,io> int
