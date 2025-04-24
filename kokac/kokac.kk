@@ -109,8 +109,8 @@ fun package()
 
 pub fun name/init(nm: path): io ()
   println("Init " ++ nm.realpath.string)
-  with val current-dir = cwd() / nm.string 
-  val pkg = (current-dir / "package.kk").realpath
+  with fun current-dir() cwd() / nm.string 
+  val pkg = (current-dir() / "package.kk").realpath
   if !is-file(pkg) then
     write-text-file(pkg, basic-package, True)
   write-text-file(nm / "bin" / "run.kk", basic-test, True)
@@ -118,13 +118,13 @@ pub fun name/init(nm: path): io ()
 
 pub fun basic/init(): io ()
   val pkg = cwd() / "package.kk"
-  with val current-dir = cwd()
+  with fun current-dir() cwd()
   if !is-file(pkg) then
     write-text-file(pkg, basic-package)
   common/init()
 
-fun common/init(): <io,current-dir> ()
-  with set-package-root(current-dir)
+noinline fun common/init(): <io,current-dir> ()
+  with set-package-root(current-dir())
   init-directory()
   init-updater()
   init-package-runner()
@@ -143,7 +143,7 @@ fun copy-package-file()
 fun init-updater()
   val runner = update-runner-source()
   val out = update-runner-exe()
-  write-text-file(runner, update-runner(current-dir.string))
+  write-text-file(runner, update-runner(current-dir().string))
   write-text-file(last-deps-path(), "")
   run("koka " ++ runner.string ++ " -o\"" ++ out.string ++ "\" -i" ++ ("deps" / "kokac").string)
   make-executable(out)
@@ -164,7 +164,7 @@ fun main()
 "#
 
 pub fun bootstrap-package(package-dir: path)
-  with val current-dir = package-dir
+  with fun current-dir() package-dir
   var needs-build := False
   while {out-of-date()} 
     println("Package config out of date")
@@ -177,7 +177,7 @@ pub fun bootstrap-package(package-dir: path)
   run-package-runner()
 
 fun update-package-runner()
-  val last-deps = current-packages(current-dir / "deps");
+  val last-deps = current-packages(current-dir() / "deps");
   copy-file(package-path(), kokac-package-path())
   write-text-file(last-deps-path(), last-deps.join("\n"))  
   write-text-file(package-runner-source(), package-runner(last-deps))
@@ -185,7 +185,7 @@ fun update-package-runner()
 fun out-of-date()
   val pkg = file_modified(package-path())
   val current = file_modified(package-runner-source())
-  val deps = current-packages(current-dir / "deps")
+  val deps = current-packages(current-dir() / "deps")
   val last-deps = parse-last-deps()
   if pkg > current then
     println("Package file out of date " ++ pkg.show ++ " " ++ current.show)
@@ -223,8 +223,8 @@ val package-path = "# ++ package-path().show ++ r#".path
 val last-deps = ["# ++ deps.map(fn(d) "\"" ++ d ++ "\"").join(", ") ++ r#"]
 
 fun main()
-  with val current-dir = cwd()
-  with set-package-root(find-package-root(current-dir))
+  with fun current-dir() cwd()
+  with set-package-root(find-package-root(current-dir()))
   with default-package-config
   current/package/package()
   install-run(package-path, ["# ++ 

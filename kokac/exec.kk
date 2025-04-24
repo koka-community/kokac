@@ -9,10 +9,10 @@ module kokac/exec
 import std/os/process
 import std/os/path
 
-pub effect val current-dir: path
+pub effect fun current-dir(): path
 
 pub fun run(command : string): <current-dir,io> string
-  val real-command = "cd \"" ++ current-dir.string ++ "\" && " ++ command
+  val real-command = "cd \"" ++ current-dir().string ++ "\" && " ++ command
   // trace(real-command)
   match run-system-read(real-command)
     Ok(str) -> str
@@ -22,6 +22,6 @@ pub fun run(command : string): <current-dir,io> string
       // throw("Command failed: " ++ real-command ++ "\n\t" ++ err.show)
 
 pub fun run-result(command : string): <current-dir,io> int
-  val real-command = "cd \"" ++ current-dir.string ++ "\" && " ++ command
+  val real-command = "cd \"" ++ current-dir().string ++ "\" && " ++ command
   // trace(real-command)
   run-system(real-command)

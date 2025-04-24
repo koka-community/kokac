@@ -72,9 +72,9 @@ pub fun download-or-update(name: string, url: string, repo-path: string, commit:
   if repo-path != "" then 
     throw("Unsupported repo-path")
   trace("Downloading " ++ name ++ " from " ++ url ++ " to " ++ target-dir.string)
-  with val current-dir = target-dir
+  with fun current-dir() target-dir
   if is-directory(target-dir / name) then 
-    with val current-dir = target-dir / name
+    with fun current-dir() target-dir / name
     checkout(commit)
     pull()
   else download(name, url, repo-path, commit)
@@ -86,17 +86,17 @@ pub fun download(name: string, url: string, repo-path: string, commit: git-ref)
   match commit
     GitDefault ->
       run("git clone --depth=1 \"" ++ url ++ "\" " ++ name)
-      with val current-dir = current-dir / name
+      with fun current-dir() current-dir() / name
       expose-branches()
       fetch-all()
     GitCommit -> 
       run("git clone --depth=1 \"" ++ url ++ "\"" ++ name)
-      with val current-dir = current-dir / name
+      with fun current-dir() current-dir() / name
       expose-branches()
       fetch-all(False)
       checkout(commit)
     GitBranch(b) ->
       run("git clone --depth=1 -b " ++ b ++ " " ++ url ++ " " ++ name)
-      with val current-dir = current-dir / name
+      with fun current-dir() current-dir() / name
       expose-branches()
       fetch-all()
