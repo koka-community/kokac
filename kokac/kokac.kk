@@ -24,30 +24,30 @@ import kokac/utils
 // TODO: Remove koka-community repo, and suggest migration to this tool
 
 pub effect package-paths
-  val package-root : path
-  val last-deps-path : path
-  val kokac-path : path
-  val package-path : path
-  val kokac-package-path : path
-  val package-runner-source : path
-  val package-runner-exe : path
-  val update-runner-source : path
-  val update-runner-exe : path
+  fun package-root() : path
+  fun last-deps-path() : path
+  fun kokac-path() : path
+  fun package-path() : path
+  fun kokac-package-path() : path
+  fun package-runner-source() : path
+  fun package-runner-exe() : path
+  fun update-runner-source() : path
+  fun update-runner-exe() : path
 
 fun set-package-root(root: path, f: () -> <package-paths,ndet|e> a): <ndet|e> a
   trace("package-root: " ++ root.string)
   val kkc = root / ".kokac"
   trace("kokac " ++ kkc.show)
   with handler
-    val package-root = root
-    val package-path = root / "package.kk"
-    val last-deps-path = kkc / "last-deps"
-    val kokac-path = kkc
-    val kokac-package-path = kkc / "current" / "package.kk"
-    val package-runner-source = kkc / "koka-package-runner.kk"
-    val package-runner-exe = (kkc / "koka-package-runner").exe-path
-    val update-runner-source = kkc / "koka-update-runner.kk"
-    val update-runner-exe = (root / "koka").exe-path
+    fun package-root() root
+    fun package-path() root / "package.kk"
+    fun last-deps-path() kkc / "last-deps"
+    fun kokac-path() kkc
+    fun kokac-package-path() kkc / "current" / "package.kk"
+    fun package-runner-source() kkc / "koka-package-runner.kk"
+    fun package-runner-exe() (kkc / "koka-package-runner").exe-path
+    fun update-runner-source() kkc / "koka-update-runner.kk"
+    fun update-runner-exe() (root / "koka").exe-path
   trace("next " ++ kkc.show)
   f()
 
@@ -73,7 +73,7 @@ fun download(dep: dependency, target-dir: path): io ()
 fun deps-path(resolution: resolution): <package-paths,io> path
   match resolution
     Global(pkg-path) -> pkg-path
-    Local -> package-root / "deps"
+    Local -> package-root() / "deps"
 
 fun install(): <package-config,package-paths,io> ()
   val download-dir = get-resolution().deps-path
@@ -107,7 +107,7 @@ fun package()
       "git@github.com:koka-community/std"
 "#
 
-pub fun name/init(nm: path)
+pub fun name/init(nm: path): io ()
   println("Init " ++ nm.realpath.string)
   with val current-dir = cwd() / nm.string 
   val pkg = (current-dir / "package.kk").realpath
@@ -116,35 +116,35 @@ pub fun name/init(nm: path)
   write-text-file(nm / "bin" / "run.kk", basic-test, True)
   common/init()
 
-pub fun basic/init()
+pub fun basic/init(): io ()
   val pkg = cwd() / "package.kk"
   with val current-dir = cwd()
   if !is-file(pkg) then
     write-text-file(pkg, basic-package)
   common/init()
 
-fun common/init()
+fun common/init(): <io,current-dir> ()
   with set-package-root(current-dir)
   init-directory()
   init-updater()
   init-package-runner()
 
 fun init-directory(): <io,package-paths> ()
-  val deps = package-root / "deps"
+  val deps = package-root() / "deps"
   ensure-dir(deps)
   download-or-update("kokac", "https://github.com/koka-community/kokac", "", GitDefault, deps)
-  ensure-dir(kokac-path)
+  ensure-dir(kokac-path())
   copy-package-file()
 
 fun copy-package-file()
-  ensure-dir(kokac-path / "current")
-  copy-file(package-path, kokac-package-path)
+  ensure-dir(kokac-path() / "current")
+  copy-file(package-path(), kokac-package-path())
 
 fun init-updater()
-  val runner = update-runner-source
-  val out = update-runner-exe
+  val runner = update-runner-source()
+  val out = update-runner-exe()
   write-text-file(runner, update-runner(current-dir.string))
-  write-text-file(last-deps-path, "")
+  write-text-file(last-deps-path(), "")
   run("koka " ++ runner.string ++ " -o\"" ++ out.string ++ "\" -i" ++ ("deps" / "kokac").string)
   make-executable(out)
   
@@ -178,13 +178,13 @@ pub fun bootstrap-package(package-dir: path)
 
 fun update-package-runner()
   val last-deps = current-packages(current-dir / "deps");
-  copy-file(package-path, kokac-package-path)
-  write-text-file(last-deps-path, last-deps.join("\n"))  
-  write-text-file(package-runner-source, package-runner(last-deps))
+  copy-file(package-path(), kokac-package-path())
+  write-text-file(last-deps-path(), last-deps.join("\n"))  
+  write-text-file(package-runner-source(), package-runner(last-deps))
 
 fun out-of-date()
-  val pkg = file_modified(package-path)
-  val current = file_modified(package-runner-source)
+  val pkg = file_modified(package-path())
+  val current = file_modified(package-runner-source())
   val deps = current-packages(current-dir / "deps")
   val last-deps = parse-last-deps()
   if pkg > current then
@@ -196,17 +196,17 @@ fun out-of-date()
   else False
 
 fun parse-last-deps()
-  val file = read-text-file(last-deps-path)
+  val file = read-text-file(last-deps-path())
   file.split("\n").filter(fn(p) p != "")
 
 fun build-package-runner()
-  val out = package-runner-exe
-  run("koka " ++ package-runner-source.string ++ " -o \"" ++ out.string ++ "\" -ideps -i.kokac -i" ++ ("deps" / "kokac").string)
+  val out = package-runner-exe()
+  run("koka " ++ package-runner-source().string ++ " -o \"" ++ out.string ++ "\" -ideps -i.kokac -i" ++ ("deps" / "kokac").string)
   make-executable(out)
 
 fun run-package-runner()
   val args = get-args()
-  run-result(package-runner-exe.string ++ " " ++ args.join(" "))
+  run-result(package-runner-exe().string ++ " " ++ args.join(" "))
 
 fun package-runner(deps: list<string>)
   r#"
@@ -219,7 +219,7 @@ import std/os/path
 import std/os/dir
 "# ++ deps.map(fn(d) "\nimport " ++ d ++ "/package").join("") ++ r#"
 
-val package-path = "# ++ package-path.show ++ r#".path
+val package-path = "# ++ package-path().show ++ r#".path
 val last-deps = ["# ++ deps.map(fn(d) "\"" ++ d ++ "\"").join(", ") ++ r#"]
 
 fun main()
