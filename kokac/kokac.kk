@@ -35,17 +35,17 @@ struct paths
   update-runner-exe: path
 
 pub effect package-paths
-  val package-paths: paths
+  fun package-paths(): paths
 
-fun package-root() package-paths.package-root
-fun last-deps-path() package-paths.last-deps-path
-fun kokac-path() package-paths.kokac-path
-fun package-path() package-paths.package-path
-fun kokac-package-path() package-paths.kokac-package-path
-fun package-runner-source() package-paths.package-runner-source
-fun package-runner-exe() package-paths.package-runner-exe
-fun update-runner-source() package-paths.update-runner-source
-fun update-runner-exe() package-paths.update-runner-exe
+fun package-root() package-paths().package-root
+fun last-deps-path() package-paths().last-deps-path
+fun kokac-path() package-paths().kokac-path
+fun package-path() package-paths().package-path
+fun kokac-package-path() package-paths().kokac-package-path
+fun package-runner-source() package-paths().package-runner-source
+fun package-runner-exe() package-paths().package-runner-exe
+fun update-runner-source() package-paths().update-runner-source
+fun update-runner-exe() package-paths().update-runner-exe
 
 fun mk-paths(root: path): <ndet> paths
   val kkc = root / ".kokac"
@@ -66,7 +66,7 @@ fun mk-paths(root: path): <ndet> paths
 
 fun set-package-root(root: path, f: () -> <package-paths,ndet|e> a): <ndet|e> a
   trace("package-root: " ++ root.string)
-  with val package-paths = mk-paths(root)
+  with fun package-paths() mk-paths(root)
   f()
 
 // Runs a file
