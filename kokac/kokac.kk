@@ -23,20 +23,6 @@ import kokac/utils
 // TODO: Default shallow clone. 
 // TODO: Remove koka-community repo, and suggest migration to this tool
 
-struct paths
-  package-root: path
-  last-deps-path: path
-  kokac-path: path
-  package-path: path
-  kokac-package-path: path
-  package-runner-source: path
-  package-runner-exe: path
-  update-runner-source: path
-  update-runner-exe: path
-
-pub effect package-paths
-  fun package-paths(): paths
-
 fun package-root() package-paths().package-root
 fun last-deps-path() package-paths().last-deps-path
 fun kokac-path() package-paths().kokac-path

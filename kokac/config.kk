@@ -7,8 +7,23 @@
 ----------------------------------------------------------------------------*/
 module kokac/config
 import kokac/package
+import kokac/exec
 import kokac/git
 import std/os/path
+
+struct paths
+  package-root: path
+  last-deps-path: path
+  kokac-path: path
+  package-path: path
+  kokac-package-path: path
+  package-runner-source: path
+  package-runner-exe: path
+  update-runner-source: path
+  update-runner-exe: path
+
+pub effect package-paths
+  fun package-paths(): paths
 
 pub effect package-config
   fun set-dependencies(deps: list<dependency>): ()
@@ -22,7 +37,7 @@ pub effect package-config
   fun get-compiler(): compiler
   fun get-resolution(): resolution
 
-pub fun default-package-config(f: () -> package-config (), install: () -> <io,package-config> ()): <io,package-config> ()
+pub fun default-package-config(f: () -> package-config (), install: () -> <io,current-dir,package-paths,package-config> ()): <io,current-dir,package-paths,package-config> ()
   var deps := []
   var scripts := []
   var dev-deps := []
