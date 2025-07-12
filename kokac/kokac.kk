@@ -249,6 +249,7 @@ fun main()
   install-run(package-path, ["# ++ 
     deps.map(fn(d) d ++ "/package/package").join(", ") ++
       r#"], last-deps)
+  ()
 "#
 
 fun current-packages(dep-dir: path): io list<string>
