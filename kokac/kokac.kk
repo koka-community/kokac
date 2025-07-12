@@ -50,7 +50,7 @@ fun mk-paths(root: path): <ndet> paths
   trace("next " ++ kkc.show)
   p
 
-fun set-package-root(root: path, f: () -> <package-paths,ndet|e> a): <ndet|e> a
+pub fun set-package-root(root: path, f: () -> <package-paths,ndet|e> a): <ndet|e> a
   trace("package-root: " ++ root.string)
   with fun package-paths() mk-paths(root)
   f()
