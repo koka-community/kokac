@@ -230,6 +230,7 @@ fun package-runner(deps: list<string>)
   r#"
 import current/package
 import kokac/config
+import kokac/exec
 import kokac/kokac
 import kokac/utils
 import std/os/env
