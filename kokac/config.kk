@@ -22,7 +22,7 @@ pub effect package-config
   fun get-compiler(): compiler
   fun get-resolution(): resolution
 
-pub fun default-package-config(f: () -> package-config ()): package-config ()
+pub fun default-package-config(f: () -> package-config (), install: () -> <io,package-config> ()): <io,package-config> ()
   var deps := []
   var scripts := []
   var dev-deps := []
@@ -40,6 +40,7 @@ pub fun default-package-config(f: () -> package-config ()): package-config ()
     fun get-compiler() compiler
     fun get-resolution() resolution
   f()
+  install()
 
 pub fun submodule/config(f: () -> package-config ()): package-config ()
   with override

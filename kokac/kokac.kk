@@ -244,8 +244,7 @@ val last-deps = ["# ++ deps.map(fn(d) "\"" ++ d ++ "\"").join(", ") ++ r#"]
 fun main()
   with fun current-dir() cwd()
   with set-package-root(find-package-root(current-dir()))
-  with default-package-config
-  current/package/package()
+  with default-package-config(current/package/package)
   install-run(package-path, ["# ++ 
     deps.map(fn(d) d ++ "/package/package").join(", ") ++
       r#"], last-deps)
