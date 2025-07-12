@@ -182,6 +182,7 @@ fun main()
 
 pub fun bootstrap-package(package-dir: path)
   with fun current-dir() package-dir
+  with set-package-root(package-dir)
   var needs-build := False
   while {out-of-date()} 
     println("Package config out of date")
