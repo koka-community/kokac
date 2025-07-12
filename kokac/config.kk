@@ -11,7 +11,7 @@ import kokac/exec
 import kokac/git
 import std/os/path
 
-struct paths
+pub struct paths
   package-root: path
   last-deps-path: path
   kokac-path: path
