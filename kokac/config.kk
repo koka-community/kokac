@@ -37,7 +37,7 @@ pub effect package-config
   fun get-compiler(): compiler
   fun get-resolution(): resolution
 
-pub fun default-package-config(f: () -> package-config (), install: () -> <io,current-dir,package-paths,package-config> ()): <io,current-dir,package-paths,package-config> ()
+pub fun default-package-config(f: () -> package-config (), install: () -> <io,current-dir,package-paths,package-config> ()): <io,current-dir,package-paths> ()
   var deps := []
   var scripts := []
   var dev-deps := []
