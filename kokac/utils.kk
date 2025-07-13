@@ -4,7 +4,7 @@ import std/os/env
 import std/os/process
 import kokac/exec 
 import kokac/config 
-import kokac/package 
+import kokac/package
 
 extern import
   c file "utils.c"

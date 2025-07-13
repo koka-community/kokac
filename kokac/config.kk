@@ -9,7 +9,10 @@ module kokac/config
 import kokac/package
 import kokac/exec
 import kokac/git
+import std/os/process
 import std/os/path
+import std/os/env
+import std/core/unsafe
 
 pub struct paths
   package-root: path
@@ -37,7 +40,7 @@ pub effect package-config
   fun get-compiler(): compiler
   fun get-resolution(): resolution
 
-pub fun default-package-config(f: () -> package-config (), install: () -> <io,current-dir,package-paths,package-config> ()): <io,current-dir,package-paths> ()
+pub fun default-package-config(f: () -> <package-config> (), install: () -> <io,current-dir,package-paths,package-config> ()): <io,current-dir,package-paths> ()
   var deps := []
   var scripts := []
   var dev-deps := []
@@ -104,8 +107,23 @@ pub fun scripts(f: () -> <package-config,scripts> ()): package-config ()
   mask<local>{f()}
   set-scripts(scripts)
 
-pub fun install-location(s: string): package-config ()
-  set-resolution(Global(s.path))
+pub fun install-location(s: path): package-config ()
+  set-resolution(Global(s))
+
+pub fun home(): io-noexn path
+  val res = try
+    if get-os-name() == "windows" then 
+      match run-system-read("%userprofile%")
+        Ok(res) -> res.trim.path
+    else 
+      match run-system-read("echo $HOME")
+        Ok(res) -> res.trim.path
+  match res
+    Ok(res) -> res
+    Error(_) -> "".path
+
+pub fun global-packages(): package-config ()
+  set-resolution(Global(unsafe-total(home) / ".koka-cache"))
 
 pub fun compiler(comp: compiler): package-config ()
   set-compiler(comp)
